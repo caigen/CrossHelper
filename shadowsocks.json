@@ -1,6 +1,6 @@
 {
 	"port_password": {
-		"6666": "HelloWorld",
-		"6667": "CrossHelper"
+		"80": "HelloWorld!"
+		"443": "HelloWorld!",
 	}
 }
