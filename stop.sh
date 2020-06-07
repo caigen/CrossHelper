@@ -1,1 +1,1 @@
-ssserver -c shadowsocks.json -d stop
+sudo ssserver -c shadowsocks.json -d stop

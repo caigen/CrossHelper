@@ -1,1 +1,1 @@
-ssserver -c shadowsocks.json -d start
+sudo ssserver -c shadowsocks.json -d start
