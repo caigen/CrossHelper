@@ -1,6 +1,7 @@
 {
 	"port_password": {
-		"80": "HelloWorld!",
-		"443": "HelloWorld!"
+		"80": "HelloWorld",
+		"6666": "HelloWorld",
+		"8080": "HelloWorld"
 	}
 }
