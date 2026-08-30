@@ -65,6 +65,28 @@ public certificate downloadable once without rerunning the installer:
 sudo chmod 644 /etc/ipsec.d/cacerts/ca-cert.pem
 ```
 
+### Install the CA certificate on Windows
+
+Place `install_cert_windows.ps1` beside the downloaded
+`crosshelper-ca-cert.pem`. Open PowerShell as Administrator and run:
+
+```powershell
+Set-ExecutionPolicy -Scope Process Bypass
+.\install_cert_windows.ps1
+```
+
+The script displays the certificate subject, SHA-256 fingerprint, and expiry
+before asking for confirmation. Specify another certificate path as the first
+argument, or use `-Force` for unattended installation:
+
+```powershell
+.\install_cert_windows.ps1 "C:\Users\me\Downloads\vpn-ca.pem" -Force
+```
+
+The certificate is installed in **Local Computer > Trusted Root Certification
+Authorities**. The script rejects malformed, expired, and non-CA certificates,
+and does nothing when the same certificate is already installed.
+
 Run `./vpnsetup.sh --help` to see all options and optional environment settings.
 
 ## RDP Server
