@@ -1,7 +1,7 @@
 # CrossHelper
 
-CrossHelper provides one script that installs and configures an IKEv2/IPsec
-VPN server on Ubuntu 24.04 using strongSwan.
+CrossHelper provides scripts for setting up an IKEv2/IPsec VPN and an XRDP
+desktop server on Ubuntu.
 
 ## Requirements
 
@@ -66,3 +66,42 @@ sudo chmod 644 /etc/ipsec.d/cacerts/ca-cert.pem
 ```
 
 Run `./vpnsetup.sh --help` to see all options and optional environment settings.
+
+## RDP Server
+
+Install XRDP with the XFCE desktop on Ubuntu 22.04 or 24.04:
+
+```bash
+chmod +x rdp_setup.sh
+sudo ./rdp_setup.sh \
+	--username rdpuser \
+	--allow-from 203.0.113.10/32
+```
+
+When the account does not exist, the script creates it. When `--password` is
+omitted, it generates and prints a password. To supply one without putting it
+in shell history:
+
+```bash
+sudo RDP_USERNAME=rdpuser \
+	RDP_PASSWORD='ReplaceWithStrongPassword1' \
+	RDP_ALLOW_FROM='203.0.113.10/32' \
+	./rdp_setup.sh
+```
+
+Connect using Microsoft Remote Desktop to `SERVER_ADDRESS:3389`, sign in with
+the configured account, and select the Xorg session. If UFW is already active,
+the script allows the selected source CIDR. You must separately allow TCP port
+3389 in the hosting provider's firewall or security group.
+
+Avoid exposing RDP to `0.0.0.0/0`. Restrict it to your public IP or connect to
+the server through the IKEv2 VPN. Manage the service with:
+
+```bash
+sudo systemctl start xrdp
+sudo systemctl stop xrdp
+sudo systemctl restart xrdp
+sudo systemctl status xrdp
+```
+
+Run `./rdp_setup.sh --help` for all RDP options.

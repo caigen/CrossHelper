@@ -77,6 +77,8 @@ source /etc/os-release
 
 [[ "$VPN_USERNAME" =~ ^[A-Za-z0-9_.@-]+$ ]] || \
   fail "The username may contain only letters, numbers, dot, underscore, @ and hyphen."
+[[ "$CA_NAME" =~ ^[A-Za-z0-9._[:space:]-]+$ ]] || \
+  fail "CA_NAME may contain only letters, numbers, spaces, dot, underscore and hyphen."
 
 if [[ -z "$VPN_PASSWORD" ]]; then
   VPN_PASSWORD="$(od -An -N16 -tx1 /dev/urandom | tr -d ' \n')"
@@ -91,8 +93,8 @@ apt-get update
 printf 'iptables-persistent iptables-persistent/autosave_v4 boolean true\n' | debconf-set-selections
 printf 'iptables-persistent iptables-persistent/autosave_v6 boolean true\n' | debconf-set-selections
 apt-get install -y --no-install-recommends \
-  strongswan strongswan-pki libcharon-extra-plugins libcharon-extauth-plugins \
-  iptables-persistent ca-certificates curl
+  strongswan libcharon-extra-plugins libcharon-extauth-plugins \
+  iptables-persistent ca-certificates curl openssl
 
 if [[ -z "$SERVER_NAME" ]]; then
   log "Detecting the server's public IPv4 address"
@@ -124,19 +126,44 @@ log "Creating the VPN certificate authority and server certificate"
 install -d -m 700 "$IPSEC_DIR/private"
 install -d -m 755 "$IPSEC_DIR/cacerts" "$IPSEC_DIR/certs"
 
-pki --gen --type rsa --size 4096 --outform pem >"$IPSEC_DIR/private/ca-key.pem"
-pki --self --ca --lifetime 3650 \
-  --in "$IPSEC_DIR/private/ca-key.pem" --type rsa \
-  --dn "CN=$CA_NAME" --outform pem >"$IPSEC_DIR/cacerts/ca-cert.pem"
+if [[ "$SERVER_NAME" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+  SERVER_SAN="IP:$SERVER_NAME"
+else
+  SERVER_SAN="DNS:$SERVER_NAME"
+fi
 
-pki --gen --type rsa --size 3072 --outform pem >"$IPSEC_DIR/private/server-key.pem"
-pki --issue --lifetime 1825 \
-  --cacert "$IPSEC_DIR/cacerts/ca-cert.pem" \
-  --cakey "$IPSEC_DIR/private/ca-key.pem" \
-  --in "$IPSEC_DIR/private/server-key.pem" --type rsa \
-  --dn "CN=$SERVER_NAME" --san "$SERVER_NAME" \
-  --flag serverAuth --flag ikeIntermediate --outform pem \
-  >"$IPSEC_DIR/certs/server-cert.pem"
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:4096 \
+  -out "$IPSEC_DIR/private/ca-key.pem"
+openssl req -x509 -new -sha256 -days 3650 \
+  -key "$IPSEC_DIR/private/ca-key.pem" \
+  -subj "/CN=$CA_NAME" \
+  -addext "basicConstraints=critical,CA:TRUE,pathlen:0" \
+  -addext "keyUsage=critical,keyCertSign,cRLSign" \
+  -out "$IPSEC_DIR/cacerts/ca-cert.pem"
+
+openssl genpkey -algorithm RSA -pkeyopt rsa_keygen_bits:3072 \
+  -out "$IPSEC_DIR/private/server-key.pem"
+openssl req -new -sha256 \
+  -key "$IPSEC_DIR/private/server-key.pem" \
+  -subj "/CN=$SERVER_NAME" \
+  -out "$IPSEC_DIR/private/server-cert.csr"
+cat >"$IPSEC_DIR/private/server-cert.ext" <<EOF
+subjectAltName=$SERVER_SAN
+basicConstraints=critical,CA:FALSE
+keyUsage=critical,digitalSignature,keyEncipherment
+extendedKeyUsage=serverAuth
+EOF
+openssl x509 -req -sha256 -days 1825 \
+  -in "$IPSEC_DIR/private/server-cert.csr" \
+  -CA "$IPSEC_DIR/cacerts/ca-cert.pem" \
+  -CAkey "$IPSEC_DIR/private/ca-key.pem" \
+  -CAserial "$IPSEC_DIR/private/ca-cert.srl" -CAcreateserial \
+  -extfile "$IPSEC_DIR/private/server-cert.ext" \
+  -out "$IPSEC_DIR/certs/server-cert.pem"
+rm -f "$IPSEC_DIR/private/server-cert.csr" "$IPSEC_DIR/private/server-cert.ext"
+
+openssl verify -CAfile "$IPSEC_DIR/cacerts/ca-cert.pem" \
+  "$IPSEC_DIR/certs/server-cert.pem" >/dev/null
 
 chmod 600 "$IPSEC_DIR/private/ca-key.pem" "$IPSEC_DIR/private/server-key.pem"
 chmod 644 "$IPSEC_DIR/cacerts/ca-cert.pem"
