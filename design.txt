@@ -1,0 +1,5 @@
+Goal:
+Create one script which can setup VPN server with IKEv2/IPsec protocal on  Ubuntu 24.04.
+
+Others:
+Clean other existing not working code.
