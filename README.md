@@ -45,4 +45,24 @@ The generated client CA certificate is saved to
 channel, install it as a trusted VPN certificate, and create an IKEv2 connection
 using the server name, username and password printed by the installer.
 
+To download the public CA certificate over SSH from a Linux, macOS, WSL, or
+Git Bash client, run:
+
+```bash
+chmod +x download_cert.sh
+./download_cert.sh ubuntu@vpn.example.com
+```
+
+The certificate is saved as `crosshelper-ca-cert.pem` in the current directory.
+Use `--output FILE` to choose another path, `--port PORT` for a non-default SSH
+port, or `--force` to replace an existing file. The downloader never accesses
+the CA private key or server private key.
+
+On a server installed with an earlier version of the setup script, make the
+public certificate downloadable once without rerunning the installer:
+
+```bash
+sudo chmod 644 /etc/ipsec.d/cacerts/ca-cert.pem
+```
+
 Run `./vpnsetup.sh --help` to see all options and optional environment settings.

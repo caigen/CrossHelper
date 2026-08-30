@@ -139,6 +139,7 @@ pki --issue --lifetime 1825 \
   >"$IPSEC_DIR/certs/server-cert.pem"
 
 chmod 600 "$IPSEC_DIR/private/ca-key.pem" "$IPSEC_DIR/private/server-key.pem"
+chmod 644 "$IPSEC_DIR/cacerts/ca-cert.pem"
 cp "$IPSEC_DIR/cacerts/ca-cert.pem" "$CA_EXPORT"
 chmod 644 "$CA_EXPORT"
 
